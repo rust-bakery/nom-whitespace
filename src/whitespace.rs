@@ -1,104 +1,98 @@
-//! Support for whitespace delimited formats
-//!
-//! a lot of textual formats allows spaces and other
-//! types of separators between tokens. Handling it
-//! manually with nom means wrapping all parsers
-//! like this:
-//!
-//! ```ignore
-//! named!(token, delimited!(space, tk, space));
-//! ```
-//!
-//! To ease the development of such parsers, you
-//! can use the whitespace parsing facility, which works
-//! as follows:
-//!
-//! ```
-//! # #[macro_use] extern crate nom;
-//! # fn main() {
-//! named!(tuple<&[u8], (&[u8], &[u8]) >,
-//!   ws!(tuple!( take!(3), tag!("de") ))
-//! );
-//!
-//! assert_eq!(
-//!   tuple(&b" \t abc de fg"[..]),
-//!  Ok((&b"fg"[..], (&b"abc"[..], &b"de"[..])))
-//! );
-//! # }
-//! ```
-//!
-//! The `ws!` combinator will modify the parser to
-//! intersperse space parsers everywhere. By default,
-//! it will consume the following characters: `" \t\r\n"`.
-//!
-//! If you want to modify that behaviour, you can make
-//! your own whitespace wrapper. As an example, if
-//! you don't want to consume ends of lines, only
-//! spaces and tabs, you can do it like this:
-//!
-//! ```
-//! # #[macro_use] extern crate nom;
-//! named!(pub space, eat_separator!(&b" \t"[..]));
-//!
-//! #[macro_export]
-//! macro_rules! sp (
-//!   ($i:expr, $($args:tt)*) => (
-//!     {
-//!       use nom::Convert;
-//!       use nom::Err;
-//!
-//!       match sep!($i, space, $($args)*) {
-//!         Err(e) => Err(e),
-//!         Ok((i1,o))    => {
-//!           match space(i1) {
-//!             Err(e) => Err(Err::convert(e)),
-//!             Ok((i2,_))    => Ok((i2, o))
-//!           }
-//!         }
-//!       }
-//!     }
-//!   )
-//! );
-//!
-//! # fn main() {
-//! named!(tuple<&[u8], (&[u8], &[u8]) >,
-//!   sp!(tuple!( take!(3), tag!("de") ))
-//! );
-//!
-//! assert_eq!(
-//!   tuple(&b" \t abc de fg"[..]),
-//!  Ok((&b"fg"[..], (&b"abc"[..], &b"de"[..])))
-//! );
-//! # }
-//! ```
-//!
-//! This combinator works by replacing each combinator with
-//! a version that supports wrapping with separator parsers.
-//! It will not support the combinators you wrote in your
-//! own code. You can still manually wrap them with the separator
-//! you want, or you can copy the macros defined in src/whitespace.rs
-//! and modify them to support a new combinator:
-//!
-//! * copy the combinator's code here, add the _sep suffix
-//! * add the `$separator:expr` as second argument
-//! * wrap any sub parsers with sep!($separator, $submac!($($args)*))
-//! * reference it in the definition of `sep!` as follows:
-//!
-//! ```ignore
-//!  ($i:expr,  $separator:path, my_combinator ! ($($rest:tt)*) ) => {
-//!    wrap_sep!($i,
-//!      $separator,
-//!      my_combinator_sep!($separator, $($rest)*)
-//!    )
-//!  };
-//! ```
-//!
+#[doc(hidden)]
+#[macro_export]
+macro_rules! nom_ws_error_position (
+  ($($args:tt)*) => (error_position!($($args)*));
+);
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! nom_ws_error_node_position (
+  ($($args:tt)*) => (error_node_position!($($args)*));
+);
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! nom_call (
+  ($($args:tt)*) => (call!($($args)*));
+);
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! nom_tuple (
+  ($($args:tt)*) => (tuple!($($args)*));
+);
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! nom_permutation_init (
+  ($($args:tt)*) => (permutation_init!($($args)*));
+);
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! nom_permutation_unwrap (
+  ($($args:tt)*) => (permutation_unwrap!($($args)*));
+);
+
+#[doc(hidden)]
+#[macro_export(local_inner_macros)]
+macro_rules! succ (
+  (0, $submac:ident ! ($($rest:tt)*)) => ($submac!(1, $($rest)*));
+  (1, $submac:ident ! ($($rest:tt)*)) => ($submac!(2, $($rest)*));
+  (2, $submac:ident ! ($($rest:tt)*)) => ($submac!(3, $($rest)*));
+  (3, $submac:ident ! ($($rest:tt)*)) => ($submac!(4, $($rest)*));
+  (4, $submac:ident ! ($($rest:tt)*)) => ($submac!(5, $($rest)*));
+  (5, $submac:ident ! ($($rest:tt)*)) => ($submac!(6, $($rest)*));
+  (6, $submac:ident ! ($($rest:tt)*)) => ($submac!(7, $($rest)*));
+  (7, $submac:ident ! ($($rest:tt)*)) => ($submac!(8, $($rest)*));
+  (8, $submac:ident ! ($($rest:tt)*)) => ($submac!(9, $($rest)*));
+  (9, $submac:ident ! ($($rest:tt)*)) => ($submac!(10, $($rest)*));
+  (10, $submac:ident ! ($($rest:tt)*)) => ($submac!(11, $($rest)*));
+  (11, $submac:ident ! ($($rest:tt)*)) => ($submac!(12, $($rest)*));
+  (12, $submac:ident ! ($($rest:tt)*)) => ($submac!(13, $($rest)*));
+  (13, $submac:ident ! ($($rest:tt)*)) => ($submac!(14, $($rest)*));
+  (14, $submac:ident ! ($($rest:tt)*)) => ($submac!(15, $($rest)*));
+  (15, $submac:ident ! ($($rest:tt)*)) => ($submac!(16, $($rest)*));
+  (16, $submac:ident ! ($($rest:tt)*)) => ($submac!(17, $($rest)*));
+  (17, $submac:ident ! ($($rest:tt)*)) => ($submac!(18, $($rest)*));
+  (18, $submac:ident ! ($($rest:tt)*)) => ($submac!(19, $($rest)*));
+  (19, $submac:ident ! ($($rest:tt)*)) => ($submac!(20, $($rest)*));
+);
+
+// HACK: for some reason, Rust 1.11 does not accept $res.$it in
+// nom_permutation_unwrap. This is a bit ugly, but it will have no
+// impact on the generated code
+#[doc(hidden)]
+#[macro_export(local_inner_macros)]
+macro_rules! acc (
+  (0, $tup:expr) => ($tup.0);
+  (1, $tup:expr) => ($tup.1);
+  (2, $tup:expr) => ($tup.2);
+  (3, $tup:expr) => ($tup.3);
+  (4, $tup:expr) => ($tup.4);
+  (5, $tup:expr) => ($tup.5);
+  (6, $tup:expr) => ($tup.6);
+  (7, $tup:expr) => ($tup.7);
+  (8, $tup:expr) => ($tup.8);
+  (9, $tup:expr) => ($tup.9);
+  (10, $tup:expr) => ($tup.10);
+  (11, $tup:expr) => ($tup.11);
+  (12, $tup:expr) => ($tup.12);
+  (13, $tup:expr) => ($tup.13);
+  (14, $tup:expr) => ($tup.14);
+  (15, $tup:expr) => ($tup.15);
+  (16, $tup:expr) => ($tup.16);
+  (17, $tup:expr) => ($tup.17);
+  (18, $tup:expr) => ($tup.18);
+  (19, $tup:expr) => ($tup.19);
+  (20, $tup:expr) => ($tup.20);
+);
 
 #[macro_export(local_inner_macros)]
 macro_rules! wrap_sep (
   ($i:expr, $separator:expr, $submac:ident!( $($args:tt)* )) => ({
     use $crate::lib::std::result::Result::*;
-    use $crate::{Err,Convert,IResult};
+    use $crate::lib::nom::{Err,Convert,IResult};
 
     fn unify_types<I,O,P,E>(_: &IResult<I,O,E>, _: &IResult<I,P,E>) {}
 
@@ -113,7 +107,7 @@ macro_rules! wrap_sep (
     }
   });
   ($i:expr, $separator:expr, $f:expr) => (
-    wrap_sep!($i, $separator, call!($f))
+    wrap_sep!($i, $separator, nom_nom_call!($f))
   );
 );
 
@@ -121,20 +115,20 @@ macro_rules! wrap_sep (
 #[macro_export(local_inner_macros)]
 macro_rules! pair_sep (
   ($i:expr, $separator:path, $submac:ident!( $($args:tt)* ), $submac2:ident!( $($args2:tt)* )) => (
-    tuple!(
+    nom_tuple!(
       $i,
       sep!($separator, $submac!($($args)*)),
       sep!($separator, $submac2!($($args2)*))
     )
   );
   ($i:expr, $separator:path, $submac:ident!( $($args:tt)* ), $g:expr) => (
-    pair_sep!($i, $separator, $submac!($($args)*), call!($g));
+    pair_sep!($i, $separator, $submac!($($args)*), nom_call!($g));
   );
   ($i:expr, $separator:path, $f:expr, $submac:ident!( $($args:tt)* )) => (
-    pair_sep!($i, $separator, call!($f), $submac!($($args)*));
+    pair_sep!($i, $separator, nom_call!($f), $submac!($($args)*));
   );
   ($i:expr, $separator:path, $f:expr, $g:expr) => (
-    pair_sep!($i, $separator, call!($f), call!($g));
+    pair_sep!($i, $separator, nom_call!($f), nom_call!($g));
   );
 );
 
@@ -152,7 +146,7 @@ macro_rules! delimited_sep (
     }
   });
   ($i:expr, $separator:path, $f:expr, $($rest:tt)+) => (
-    delimited_sep!($i, $separator, call!($f), $($rest)*);
+    delimited_sep!($i, $separator, nom_call!($f), $($rest)*);
   );
 );
 
@@ -170,7 +164,7 @@ macro_rules! separated_pair_sep (
     }
   });
   ($i:expr, $separator:path, $f:expr, $($rest:tt)+) => (
-    separated_pair_sep!($i, $separator, call!($f), $($rest)*);
+    separated_pair_sep!($i, $separator, nom_call!($f), $($rest)*);
   );
 );
 
@@ -188,13 +182,13 @@ macro_rules! preceded_sep (
     }
   });
   ($i:expr, $separator:path, $submac:ident!( $($args:tt)* ), $g:expr) => (
-    preceded_sep!($i, $separator, $submac!($($args)*), call!($g));
+    preceded_sep!($i, $separator, $submac!($($args)*), nom_call!($g));
   );
   ($i:expr, $separator:path, $f:expr, $submac:ident!( $($args:tt)* )) => (
-    preceded_sep!($i, $separator, call!($f), $submac!($($args)*));
+    preceded_sep!($i, $separator, nom_call!($f), $submac!($($args)*));
   );
   ($i:expr, $separator:path, $f:expr, $g:expr) => (
-    preceded_sep!($i, $separator, call!($f), call!($g));
+    preceded_sep!($i, $separator, nom_call!($f), nom_call!($g));
   );
 );
 
@@ -212,13 +206,13 @@ macro_rules! terminated_sep (
     }
   });
   ($i:expr, $separator:path, $submac:ident!( $($args:tt)* ), $g:expr) => (
-    terminated_sep!($i, $separator, $submac!($($args)*), call!($g));
+    terminated_sep!($i, $separator, $submac!($($args)*), nom_call!($g));
   );
   ($i:expr, $separator:path, $f:expr, $submac:ident!( $($args:tt)* )) => (
-    terminated_sep!($i, $separator, call!($f), $submac!($($args)*));
+    terminated_sep!($i, $separator, nom_call!($f), $submac!($($args)*));
   );
   ($i:expr, $separator:path, $f:expr, $g:expr) => (
-    terminated_sep!($i, $separator, call!($f), call!($g));
+    terminated_sep!($i, $separator, nom_call!($f), nom_call!($g));
   );
 );
 
@@ -227,7 +221,7 @@ macro_rules! terminated_sep (
 #[macro_export(local_inner_macros)]
 macro_rules! tuple_sep (
   ($i:expr, $separator:path, ($($parsed:tt),*), $e:path, $($rest:tt)*) => (
-    tuple_sep!($i, $separator, ($($parsed),*), call!($e), $($rest)*);
+    tuple_sep!($i, $separator, ($($parsed),*), nom_call!($e), $($rest)*);
   );
   ($i:expr, $separator:path, (), $submac:ident!( $($args:tt)* ), $($rest:tt)*) => (
     {
@@ -254,7 +248,7 @@ macro_rules! tuple_sep (
     }
   );
   ($i:expr, $separator:path, ($($parsed:tt),*), $e:path) => (
-    tuple_sep!($i, $separator, ($($parsed),*), call!($e));
+    tuple_sep!($i, $separator, ($($parsed),*), nom_call!($e));
   );
   ($i:expr, $separator:path, (), $submac:ident!( $($args:tt)* )) => (
     {
@@ -295,7 +289,7 @@ macro_rules! do_parse_sep (
   );
 
   (__impl $i:expr, $separator:path, $e:ident >> $($rest:tt)*) => (
-    do_parse_sep!(__impl $i, $separator, call!($e) >> $($rest)*);
+    do_parse_sep!(__impl $i, $separator, nom_call!($e) >> $($rest)*);
   );
   (__impl $i:expr, $separator:path, $submac:ident!( $($args:tt)* ) >> $($rest:tt)*) => (
     {
@@ -311,7 +305,7 @@ macro_rules! do_parse_sep (
   );
 
   (__impl $i:expr, $separator:path, $field:ident : $e:ident >> $($rest:tt)*) => (
-    do_parse_sep!(__impl $i, $separator, $field: call!($e) >> $($rest)*);
+    do_parse_sep!(__impl $i, $separator, $field: nom_call!($e) >> $($rest)*);
   );
 
   (__impl $i:expr, $separator:path, $field:ident : $submac:ident!( $($args:tt)* ) >> $($rest:tt)*) => (
@@ -330,7 +324,7 @@ macro_rules! do_parse_sep (
 
   // ending the chain
   (__impl $i:expr, $separator:path, $e:ident >> ( $($rest:tt)* )) => (
-    do_parse_sep!(__impl $i, $separator, call!($e) >> ( $($rest)* ));
+    do_parse_sep!(__impl $i, $separator, nom_call!($e) >> ( $($rest)* ));
   );
 
   (__impl $i:expr, $separator:path, $submac:ident!( $($args:tt)* ) >> ( $($rest:tt)* )) => ({
@@ -345,7 +339,7 @@ macro_rules! do_parse_sep (
   });
 
   (__impl $i:expr, $separator:path, $field:ident : $e:ident >> ( $($rest:tt)* )) => (
-    do_parse_sep!(__impl $i, $separator, $field: call!($e) >> ( $($rest)* ) );
+    do_parse_sep!(__impl $i, $separator, $field: nom_call!($e) >> ( $($rest)* ) );
   );
 
   (__impl $i:expr, $separator:path, $field:ident : $submac:ident!( $($args:tt)* ) >> ( $($rest:tt)* )) => ({
@@ -374,9 +368,9 @@ macro_rules! permutation_sep (
     {
       use $crate::lib::std::result::Result::*;
       use $crate::lib::std::option::Option::*;
-      use $crate::{Err,ErrorKind,Convert};
+      use $crate::lib::nom::{Err,ErrorKind,Convert};
 
-      let mut res    = permutation_init!((), $($rest)*);
+      let mut res    = nom_permutation_init!((), $($rest)*);
       let mut input  = $i;
       let mut error  = None;
       let mut needed = None;
@@ -388,7 +382,7 @@ macro_rules! permutation_sep (
         //if we reach that part, it means none of the parsers were able to read anything
         if !all_done {
           //FIXME: should wrap the error returned by the child parser
-          error = Option::Some(error_position!(input, ErrorKind::Permutation));
+          error = Option::Some(nom_ws_error_position!(input, ErrorKind::Permutation));
         }
         break;
       }
@@ -396,13 +390,13 @@ macro_rules! permutation_sep (
       if let Some(need) = needed {
         Err(Err::convert(need))
       } else {
-        if let Some(unwrapped_res) = { permutation_unwrap!(0, (), res, $($rest)*) } {
+        if let Some(unwrapped_res) = { nom_permutation_unwrap!(0, (), res, $($rest)*) } {
           Ok((input, unwrapped_res))
         } else {
           if let Some(e) = error {
-            Err(Err::Error(error_node_position!($i, ErrorKind::Permutation, e)))
+            Err(Err::Error(nom_ws_error_node_position!($i, ErrorKind::Permutation, e)))
           } else {
-            Err(Err::Error(error_position!($i, ErrorKind::Permutation)))
+            Err(Err::Error(nom_ws_error_position!($i, ErrorKind::Permutation)))
           }
         }
       }
@@ -414,10 +408,10 @@ macro_rules! permutation_sep (
 #[macro_export(local_inner_macros)]
 macro_rules! permutation_iterator_sep (
   ($it:tt,$i:expr, $separator:path, $all_done:expr, $needed:expr, $res:expr, $e:ident?, $($rest:tt)*) => (
-    permutation_iterator_sep!($it, $i, $separator, $all_done, $needed, $res, call!($e), $($rest)*);
+    permutation_iterator_sep!($it, $i, $separator, $all_done, $needed, $res, nom_call!($e), $($rest)*);
   );
   ($it:tt,$i:expr, $separator:path, $all_done:expr, $needed:expr, $res:expr, $e:ident, $($rest:tt)*) => (
-    permutation_iterator_sep!($it, $i, $separator, $all_done, $needed, $res, call!($e), $($rest)*);
+    permutation_iterator_sep!($it, $i, $separator, $all_done, $needed, $res, nom_call!($e), $($rest)*);
   );
 
   ($it:tt, $i:expr, $separator:path, $all_done:expr, $needed:expr, $res:expr, $submac:ident!( $($args:tt)* )?, $($rest:tt)*) => ({
@@ -425,7 +419,7 @@ macro_rules! permutation_iterator_sep (
   });
   ($it:tt, $i:expr, $separator:path, $all_done:expr, $needed:expr, $res:expr, $submac:ident!( $($args:tt)* ), $($rest:tt)*) => ({
     use $crate::lib::std::result::Result::*;
-    use $crate::Err;
+    use $crate::lib::nom::Err;
 
     if acc!($it, $res) == $crate::lib::std::option::Option::None {
       match {sep!($i, $separator, $submac!($($args)*))} {
@@ -447,10 +441,10 @@ macro_rules! permutation_iterator_sep (
   });
 
   ($it:tt,$i:expr, $separator:path, $all_done:expr, $needed:expr, $res:expr, $e:ident?) => (
-    permutation_iterator_sep!($it, $i, $separator, $all_done, $res, call!($e));
+    permutation_iterator_sep!($it, $i, $separator, $all_done, $res, nom_call!($e));
   );
   ($it:tt,$i:expr, $separator:path, $all_done:expr, $needed:expr, $res:expr, $e:ident) => (
-    permutation_iterator_sep!($it, $i, $separator, $all_done, $res, call!($e));
+    permutation_iterator_sep!($it, $i, $separator, $all_done, $res, nom_call!($e));
   );
 
   ($it:tt, $i:expr, $separator:path, $all_done:expr, $needed:expr, $res:expr, $submac:ident!( $($args:tt)* )?) => ({
@@ -458,7 +452,7 @@ macro_rules! permutation_iterator_sep (
   });
   ($it:tt, $i:expr, $separator:path, $all_done:expr, $needed:expr, $res:expr, $submac:ident!( $($args:tt)* )) => ({
     use $crate::lib::std::result::Result::*;
-    use $crate::Err;
+    use $crate::lib::nom::Err;
 
     if acc!($it, $res) == $crate::lib::std::option::Option::None {
       match sep!($i, $separator, $submac!($($args)*)) {
@@ -483,13 +477,13 @@ macro_rules! permutation_iterator_sep (
 #[macro_export(local_inner_macros)]
 macro_rules! alt_sep (
   (__impl $i:expr, $separator:path, $e:path | $($rest:tt)*) => (
-    alt_sep!(__impl $i, $separator, call!($e) | $($rest)*);
+    alt_sep!(__impl $i, $separator, nom_call!($e) | $($rest)*);
   );
 
   (__impl $i:expr, $separator:path, $subrule:ident!( $($args:tt)*) | $($rest:tt)*) => (
     {
       use $crate::lib::std::result::Result::*;
-      use $crate::Err;
+      use $crate::lib::nom::Err;
 
       let res = sep!($i, $separator, $subrule!($($args)*));
       match res {
@@ -503,7 +497,7 @@ macro_rules! alt_sep (
   (__impl $i:expr, $separator:path, $subrule:ident!( $($args:tt)* ) => { $gen:expr } | $($rest:tt)+) => (
     {
       use $crate::lib::std::result::Result::*;
-      use $crate::Err;
+      use $crate::lib::nom::Err;
 
       match sep!($i, $separator, $subrule!( $($args)* )) {
         Ok((i,o))               => Ok((i,$gen(o))),
@@ -516,23 +510,23 @@ macro_rules! alt_sep (
   );
 
   (__impl $i:expr, $separator:path, $e:path => { $gen:expr } | $($rest:tt)*) => (
-    alt_sep!(__impl $i, $separator, call!($e) => { $gen } | $($rest)*);
+    alt_sep!(__impl $i, $separator, nom_call!($e) => { $gen } | $($rest)*);
   );
 
   (__impl $i:expr, $separator:path, $e:path => { $gen:expr }) => (
-    alt_sep!(__impl $i, $separator, call!($e) => { $gen });
+    alt_sep!(__impl $i, $separator, nom_call!($e) => { $gen });
   );
 
   (__impl $i:expr, $separator:path, $subrule:ident!( $($args:tt)* ) => { $gen:expr }) => (
     {
       use $crate::lib::std::result::Result::*;
-      use $crate::Err;
+      use $crate::lib::nom::Err;
 
       match sep!($i, $separator, $subrule!( $($args)* )) {
         Ok((i,o))     => Ok((i,$gen(o))),
         Err(Err::Error(e))      => {
           fn unify_types<T>(_: &T, _: &T) {}
-          let e2 = error_position!($i, $crate::ErrorKind::Alt);
+          let e2 = nom_ws_error_position!($i, $crate::lib::nom::ErrorKind::Alt);
           unify_types(&e, &e2);
           Err(Err::Error(e2))
         },
@@ -542,19 +536,19 @@ macro_rules! alt_sep (
   );
 
   (__impl $i:expr, $separator:path, $e:path) => (
-    alt_sep!(__impl $i, $separator, call!($e));
+    alt_sep!(__impl $i, $separator, nom_call!($e));
   );
 
   (__impl $i:expr, $separator:path, $subrule:ident!( $($args:tt)*)) => (
     {
       use $crate::lib::std::result::Result::*;
-      use $crate::Err;
+      use $crate::lib::nom::Err;
 
       match sep!($i, $separator, $subrule!( $($args)* )) {
         Ok((i,o))     => Ok((i,o)),
         Err(Err::Error(e))      => {
           fn unify_types<T>(_: &T, _: &T) {}
-          let e2 = error_position!($i, $crate::ErrorKind::Alt);
+          let e2 = nom_ws_error_position!($i, $crate::lib::nom::ErrorKind::Alt);
           unify_types(&e, &e2);
           Err(Err::Error(e2))
         },
@@ -565,16 +559,16 @@ macro_rules! alt_sep (
 
   (__impl $i:expr) => ({
     use $crate::lib::std::result::Result::*;
-    use $crate::{Err,Needed,IResult};
+    use $crate::lib::nom::{Err,Needed,IResult};
 
-    Err(Err::Error(error_position!($i, $crate::ErrorKind::Alt)))
+    Err(Err::Error(nom_ws_error_position!($i, $crate::lib::nom::ErrorKind::Alt)))
   });
 
   (__impl $i:expr, $separator:path) => ({
     use $crate::lib::std::result::Result::*;
-    use $crate::{Err,Needed,IResult};
+    use $crate::lib::nom::{Err,Needed,IResult};
 
-    Err(Err::Error(error_position!($i, $crate::ErrorKind::Alt)))
+    Err(Err::Error(nom_ws_error_position!($i, $crate::lib::nom::ErrorKind::Alt)))
   });
 
   ($i:expr, $separator:path, $($rest:tt)*) => (
@@ -588,7 +582,7 @@ macro_rules! alt_sep (
 #[macro_export(local_inner_macros)]
 macro_rules! alt_complete_sep (
   ($i:expr, $separator:path, $e:path | $($rest:tt)*) => (
-    alt_complete_sep!($i, $separator, complete!(call!($e)) | $($rest)*);
+    alt_complete_sep!($i, $separator, complete!(nom_call!($e)) | $($rest)*);
   );
 
   ($i:expr, $separator:path, $subrule:ident!( $($args:tt)*) | $($rest:tt)*) => (
@@ -606,7 +600,7 @@ macro_rules! alt_complete_sep (
   ($i:expr, $separator:path, $subrule:ident!( $($args:tt)* ) => { $gen:expr } | $($rest:tt)+) => (
     {
       use $crate::lib::std::result::Result::*;
-      use $crate::{Err,Needed,IResult};
+      use $crate::lib::nom::{Err,Needed,IResult};
 
       match complete!($i, sep!($separator, $subrule!($($args)*))) {
         Ok((i,o)) => Ok((i,$gen(o))),
@@ -616,13 +610,13 @@ macro_rules! alt_complete_sep (
   );
 
   ($i:expr, $separator:path, $e:path => { $gen:expr } | $($rest:tt)*) => (
-    alt_complete_sep!($i, $separator, complete!(call!($e)) => { $gen } | $($rest)*);
+    alt_complete_sep!($i, $separator, complete!(nom_call!($e)) => { $gen } | $($rest)*);
   );
 
   // Tail (non-recursive) rules
 
   ($i:expr, $separator:path, $e:path => { $gen:expr }) => (
-    alt_complete_sep!($i, $separator, call!($e) => { $gen });
+    alt_complete_sep!($i, $separator, nom_call!($e) => { $gen });
   );
 
   ($i:expr, $separator:path, $subrule:ident!( $($args:tt)* ) => { $gen:expr }) => (
@@ -630,7 +624,7 @@ macro_rules! alt_complete_sep (
   );
 
   ($i:expr, $separator:path, $e:path) => (
-    alt_complete_sep!($i, $separator, call!($e));
+    alt_complete_sep!($i, $separator, nom_call!($e));
   );
 
   ($i:expr, $separator:path, $subrule:ident!( $($args:tt)*)) => (
@@ -644,26 +638,26 @@ macro_rules! switch_sep (
   (__impl $i:expr, $separator:path, $submac:ident!( $($args:tt)* ), $($p:pat => $subrule:ident!( $($args2:tt)* ))|* ) => (
     {
       use $crate::lib::std::result::Result::*;
-      use $crate::Err;
+      use $crate::lib::nom::Err;
 
       match sep!($i, $separator, $submac!($($args)*)) {
-        Err(Err::Error(e))      => Err(Err::Error(error_node_position!(
-            $i, $crate::ErrorKind::Switch, e
+        Err(Err::Error(e))      => Err(Err::Error(nom_ws_error_node_position!(
+            $i, $crate::lib::nom::ErrorKind::Switch, e
         ))),
         Err(Err::Failure(e))    => Err(Err::Failure(
-            error_node_position!($i, $crate::ErrorKind::Switch, e))),
+            nom_ws_error_node_position!($i, $crate::lib::nom::ErrorKind::Switch, e))),
         Err(e) => Err(e),
         Ok((i, o))    => {
           match o {
             $($p => match sep!(i, $separator, $subrule!($($args2)*)) {
-              Err(Err::Error(e)) => Err(Err::Error(error_node_position!(
-                  $i, $crate::ErrorKind::Switch, e
+              Err(Err::Error(e)) => Err(Err::Error(nom_ws_error_node_position!(
+                  $i, $crate::lib::nom::ErrorKind::Switch, e
               ))),
               Err(Err::Failure(e))    => Err(Err::Failure(
-                  error_node_position!($i, $crate::ErrorKind::Switch, e))),
+                  nom_ws_error_node_position!($i, $crate::lib::nom::ErrorKind::Switch, e))),
               a => a,
             }),*,
-            _    => Err(Err::Error(error_position!($i, $crate::ErrorKind::Switch)))
+            _    => Err(Err::Error(nom_ws_error_position!($i, $crate::lib::nom::ErrorKind::Switch)))
           }
         }
       }
@@ -676,7 +670,7 @@ macro_rules! switch_sep (
   );
   ($i:expr, $separator:path, $e:path, $($rest:tt)*) => (
     {
-      switch_sep!(__impl $i, $separator, call!($e), $($rest)*)
+      switch_sep!(__impl $i, $separator, nom_call!($e), $($rest)*)
     }
   );
 );
@@ -693,13 +687,13 @@ macro_rules! separated_list_sep (
     )
   );
   ($i:expr, $separator:path, $submac:ident!( $($args:tt)* ), $g:expr) => (
-    separated_list_sep!($i, $separator, $submac!($($args)*), call!($g));
+    separated_list_sep!($i, $separator, $submac!($($args)*), nom_call!($g));
   );
   ($i:expr, $separator:path, $f:expr, $submac:ident!( $($args:tt)* )) => (
-    separated_list_sep!($i, $separator, call!($f), $submac!($($args)*));
+    separated_list_sep!($i, $separator, nom_call!($f), $submac!($($args)*));
   );
   ($i:expr, $separator:path, $f:expr, $g:expr) => (
-    separated_list_sep!($i, $separator, call!($f), call!($g));
+    separated_list_sep!($i, $separator, nom_call!($f), nom_call!($g));
   );
 );
 
@@ -714,7 +708,7 @@ macro_rules! separated_list_sep (
 macro_rules! eat_separator (
   ($i:expr, $arr:expr) => (
     {
-      use $crate::{FindToken, InputTakeAtPosition};
+      use $crate::lib::nom::{FindToken, InputTakeAtPosition};
       let input = $i;
       input.split_at_position(|c| !$arr.find_token(c))
     }
@@ -824,12 +818,12 @@ macro_rules! sep (
     wrap_sep!($i, $separator, $submac!($($args)*))
   };
   ($i:expr, $separator:path, $f:expr) => {
-    wrap_sep!($i, $separator, call!($f))
+    wrap_sep!($i, $separator, nom_call!($f))
   };
 );
 
-use internal::IResult;
-use traits::{AsChar, FindToken, InputTakeAtPosition};
+use lib::nom::IResult;
+use lib::nom::{AsChar, FindToken, InputTakeAtPosition};
 #[allow(unused_imports)]
 pub fn sp<'a, T>(input: T) -> IResult<T, T>
 where
@@ -876,8 +870,8 @@ macro_rules! ws (
   ($i:expr, $($args:tt)*) => (
     {
       use $crate::sp;
-      use $crate::Convert;
-      use $crate::Err;
+      use $crate::lib::nom::Convert;
+      use $crate::lib::nom::Err;
       use $crate::lib::std::result::Result::*;
 
       match sep!($i, sp, $($args)*) {
@@ -898,10 +892,10 @@ macro_rules! ws (
 mod tests {
   #[cfg(feature = "alloc")]
   use lib::std::string::{String, ToString};
-  use internal::{Err, IResult, Needed};
+  use nom::{Err, IResult, Needed};
   use super::sp;
-  use util::ErrorKind;
-  use types::CompleteStr;
+  use nom::ErrorKind;
+  use nom::types::CompleteStr;
 
   #[test]
   fn spaaaaace() {
@@ -1036,10 +1030,10 @@ mod tests {
     let d = &b"efg  xyzabcdefghi"[..];
     assert_eq!(
       perm(d),
-      Err(Err::Error(error_node_position!(
+      Err(Err::Error(nom_ws_error_node_position!(
         &b"efg  xyzabcdefghi"[..],
         ErrorKind::Permutation,
-        error_position!(&b"  xyzabcdefghi"[..], ErrorKind::Permutation)
+        nom_ws_error_position!(&b"  xyzabcdefghi"[..], ErrorKind::Permutation)
       )))
     );
 
@@ -1098,7 +1092,7 @@ mod tests {
     let a = &b"\tabcd"[..];
     assert_eq!(
       alt1(a),
-      Err(Err::Error(error_position!(a, ErrorKind::Alt::<ErrorStr>)))
+      Err(Err::Error(nom_ws_error_position!(a, ErrorKind::Alt::<ErrorStr>)))
     );
     assert_eq!(alt2(a), Ok((&b""[..], a)));
     assert_eq!(alt3(a), Ok((a, &b""[..])));
@@ -1127,11 +1121,11 @@ mod tests {
     );
 
     let a = &b""[..];
-    assert_eq!(ac(a), Err(Err::Error(error_position!(a, ErrorKind::Alt))));
+    assert_eq!(ac(a), Err(Err::Error(nom_ws_error_position!(a, ErrorKind::Alt))));
     let a = &b" \tef "[..];
     assert_eq!(ac(a),Ok((&b""[..], &b"ef"[..])));
     let a = &b" cde"[..];
-    assert_eq!(ac(a), Err(Err::Error(error_position!(&a[1..], ErrorKind::Alt))));
+    assert_eq!(ac(a), Err(Err::Error(nom_ws_error_position!(&a[1..], ErrorKind::Alt))));
   }
   */
 
@@ -1153,7 +1147,7 @@ mod tests {
     let c = CompleteStr("afghijkl");
     assert_eq!(
       sw(c),
-      Err(Err::Error(error_position!(
+      Err(Err::Error(nom_ws_error_position!(
         CompleteStr("afghijkl"),
         ErrorKind::Switch
       )))
